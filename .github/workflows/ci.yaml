@@ -39,7 +39,7 @@ jobs:
 
       - name: Login to Yandex Container Registry
         run: |
-          echo '${{ secrets.YC_SA_KEY }}' > key.json
+          echo '${{ secrets.YC_SA_KEY }}' | base64 -d > key.json
           cat key.json | docker login --username json_key --password-stdin cr.yandex
           rm key.json
 
