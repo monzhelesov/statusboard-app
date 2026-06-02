@@ -1,0 +1,44 @@
+name: CD Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  REGISTRY: cr.yandex/crpqihg619uv9tm3ai4g
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract tag
+        id: tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Login to Yandex Container Registry
+        run: echo '${{ secrets.YC_SA_KEY }}' | docker login --username json_key --password-stdin cr.yandex
+
+      - name: Build and push with version tag
+        run: |
+          docker build -t $REGISTRY/statusboard-api:${{ steps.tag.outputs.VERSION }} ./api
+          docker push $REGISTRY/statusboard-api:${{ steps.tag.outputs.VERSION }}
+          docker build -t $REGISTRY/statusboard-frontend:${{ steps.tag.outputs.VERSION }} ./frontend
+          docker push $REGISTRY/statusboard-frontend:${{ steps.tag.outputs.VERSION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo '${{ secrets.KUBE_CONFIG }}' | base64 -d > ~/.kube/config
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl set image deployment/api api=$REGISTRY/statusboard-api:${{ steps.tag.outputs.VERSION }} -n statusboard
+          kubectl set image deployment/frontend frontend=$REGISTRY/statusboard-frontend:${{ steps.tag.outputs.VERSION }} -n statusboard
+          kubectl rollout status deployment/api -n statusboard --timeout=120s
+          kubectl rollout status deployment/frontend -n statusboard --timeout=120s

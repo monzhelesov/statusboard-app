@@ -1,0 +1,53 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: cr.yandex/crpqihg619uv9tm3ai4g
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd api
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd api
+          pytest tests/ -v
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Yandex Container Registry
+        run: echo '${{ secrets.YC_SA_KEY }}' | docker login --username json_key --password-stdin cr.yandex
+
+      - name: Build and push API
+        run: |
+          docker build -t $REGISTRY/statusboard-api:${{ github.sha }} -t $REGISTRY/statusboard-api:latest ./api
+          docker push $REGISTRY/statusboard-api:${{ github.sha }}
+          docker push $REGISTRY/statusboard-api:latest
+
+      - name: Build and push Frontend
+        run: |
+          docker build -t $REGISTRY/statusboard-frontend:${{ github.sha }} -t $REGISTRY/statusboard-frontend:latest ./frontend
+          docker push $REGISTRY/statusboard-frontend:${{ github.sha }}
+          docker push $REGISTRY/statusboard-frontend:latest
