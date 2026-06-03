@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 env:
-  REGISTRY: cr.yandex/crpqihg619uv9tm3ai4g
+  REGISTRY: cr.yandex/crpufe9dqcko3m9fa2eh
 
 jobs:
   deploy:
