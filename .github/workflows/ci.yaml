@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: cr.yandex/crp0s4jsnu8fqmt6c2lv
+  REGISTRY: cr.yandex/crpufe9dqcko3m9fa2eh
 
 jobs:
   test:
@@ -43,14 +43,34 @@ jobs:
           cat key.json | docker login --username json_key --password-stdin cr.yandex
           rm key.json
 
-      - name: Build and push API
+      - name: Build API image
+        run: docker build -t $REGISTRY/statusboard-api:${{ github.sha }} -t $REGISTRY/statusboard-api:latest ./api
+
+      - name: Scan API image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/statusboard-api:${{ github.sha }}
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+
+      - name: Push API image
         run: |
-          docker build -t $REGISTRY/statusboard-api:${{ github.sha }} -t $REGISTRY/statusboard-api:latest ./api
           docker push $REGISTRY/statusboard-api:${{ github.sha }}
           docker push $REGISTRY/statusboard-api:latest
 
-      - name: Build and push Frontend
+      - name: Build Frontend image
+        run: docker build -t $REGISTRY/statusboard-frontend:${{ github.sha }} -t $REGISTRY/statusboard-frontend:latest ./frontend
+
+      - name: Scan Frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/statusboard-frontend:${{ github.sha }}
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+
+      - name: Push Frontend image
         run: |
-          docker build -t $REGISTRY/statusboard-frontend:${{ github.sha }} -t $REGISTRY/statusboard-frontend:latest ./frontend
           docker push $REGISTRY/statusboard-frontend:${{ github.sha }}
           docker push $REGISTRY/statusboard-frontend:latest
