@@ -19,7 +19,10 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Login to Yandex Container Registry
-        run: echo '${{ secrets.YC_SA_KEY }}' | docker login --username json_key --password-stdin cr.yandex
+        run: |
+          echo '${{ secrets.YC_SA_KEY }}' | base64 -d > key.json
+          cat key.json | docker login --username json_key --password-stdin cr.yandex
+          rm key.json
 
       - name: Build and push with version tag
         run: |
