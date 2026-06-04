@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: cr.yandex/crpufe9dqcko3m9fa2eh
+  REGISTRY: cr.yandex/crp0s4jsnu8fqmt6c2lv
 
 jobs:
   test:
