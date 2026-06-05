@@ -39,26 +39,28 @@ API, Frontend и локальный PostgreSQL одной командой:
 - API: http://localhost:8000/api/services
 - Health: http://localhost:8000/api/health
 
-Остановить: `docker-compose down`
+Остановить: docker-compose down
 
 ## CI/CD
 
-**При каждом коммите в main:**
+При каждом коммите в main:
 1. Тесты (pytest)
-2. Сборка Docker образов
-3. Push в Yandex Container Registry с тегом commit SHA и latest
+2. Сканирование образов на уязвимости (Trivy)
+3. Сборка Docker образов
+4. Push в Yandex Container Registry с тегом commit SHA и latest
 
-**При создании тега v* — деплой в production:**
+При создании тега v* — деплой в production:
 
     git tag v1.0.0
     git push origin v1.0.0
 
 1. Сборка образов с тегом версии
 2. Push в registry
-3. Деплой в Kubernetes через `kubectl set image`
+3. Деплой в Kubernetes через kubectl set image
 4. Проверка что rollout прошёл успешно
 
 ## Секреты репозитория
 
-- `YC_SA_KEY` — JSON ключ сервисного аккаунта в base64
-- `KUBE_CONFIG` — kubeconfig в base64
+- YC_SA_KEY      — JSON ключ сервисного аккаунта в base64
+- YC_REGISTRY_ID — ID Yandex Container Registry
+- KUBE_CONFIG    — kubeconfig в base64
