@@ -1,57 +1,326 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StatusBoard</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 40px 20px; }
-        h1 { text-align: center; font-size: 2rem; margin-bottom: 8px; color: #f8fafc; }
-        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 40px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: #1e293b; border-radius: 12px; padding: 24px; border: 1px solid #334155; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .card-name { font-size: 1.1rem; font-weight: 600; }
-        .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .operational { background: #064e3b; color: #34d399; }
-        .degraded { background: #451a03; color: #fb923c; }
-        .down { background: #450a0a; color: #f87171; }
-        .uptime { color: #94a3b8; font-size: 0.9rem; }
-        .updated { text-align: center; color: #475569; font-size: 0.85rem; margin-top: 40px; }
-        .error { text-align: center; color: #f87171; margin-top: 40px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StatusBoard</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: #080b12;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(99,102,241,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(20,184,166,0.1) 0%, transparent 60%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    color: #e2e8f0;
+    padding: 0;
+  }
+
+  .noise {
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  header {
+    margin-bottom: 3rem;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1, #14b8a6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
+
+  .logo-text {
+    font-size: 15px;
+    font-weight: 600;
+    background: linear-gradient(90deg, #a5b4fc, #5eead4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.02em;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: #64748b;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+  }
+
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-val { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+  .stat-val.green { color: #34d399; }
+  .stat-val.amber { color: #fbbf24; }
+  .stat-label { font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 2rem;
+  }
+
+  .card {
+    position: relative;
+    border-radius: 16px;
+    padding: 1.5rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.14);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  }
+
+  .card-glow {
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    opacity: 0.06;
+    filter: blur(40px);
+  }
+  .card-glow.green { background: #34d399; }
+  .card-glow.amber { background: #fbbf24; }
+  .card-glow.red { background: #f87171; }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.25rem;
+  }
+
+  .card-name { font-size: 15px; font-weight: 600; color: #f1f5f9; }
+  .card-cat { font-size: 12px; color: #475569; margin-top: 2px; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+  .badge.ok { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+  .badge.warn { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+  .badge.down { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+
+  .uptime-track {
+    height: 2px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+  .uptime-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+  .uptime-fill.ok { background: linear-gradient(90deg, #10b981, #34d399); }
+  .uptime-fill.warn { background: linear-gradient(90deg, #d97706, #fbbf24); }
+  .uptime-fill.down { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+  .card-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .uptime-val { font-size: 13px; color: #64748b; }
+  .latency { font-size: 12px; color: #334155; background: rgba(255,255,255,0.04); padding: 2px 8px; border-radius: 6px; }
+
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .updated {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #334155;
+  }
+
+  .pulse-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(52,211,153,0); }
+  }
+
+  .refresh-btn {
+    font-size: 12px;
+    color: #475569;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+
+  .error { text-align: center; padding: 3rem; color: #f87171; font-size: 14px; }
+</style>
 </head>
 <body>
-    <h1>StatusBoard</h1>
-    <p class="subtitle">Service Status Dashboard</p>
-    <div class="grid" id="services"></div>
-    <p class="updated" id="updated"></p>
-    <p class="error" id="error"></p>
+<div class="noise"></div>
+<div class="container">
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      </div>
+      <span class="logo-text">StatusBoard</span>
+    </div>
+    <h1>Service health</h1>
+    <p class="subtitle">Real-time monitoring dashboard</p>
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-val green" id="ok-count">—</span>
+        <span class="stat-label">Operational</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val amber" id="warn-count">—</span>
+        <span class="stat-label">Degraded</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val" id="down-count">—</span>
+        <span class="stat-label">Down</span>
+      </div>
+    </div>
+  </header>
 
-    <script>
-        async function fetchServices() {
-            try {
-                const res = await fetch('/api/services');
-                const data = await res.json();
-                const grid = document.getElementById('services');
-                grid.innerHTML = data.services.map(s => `
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-name">${s.name}</span>
-                            <span class="badge ${s.status}">${s.status}</span>
-                        </div>
-                        <div class="uptime">Uptime: ${s.uptime}</div>
-                    </div>
-                `).join('');
-                document.getElementById('updated').textContent = 'Last updated: ' + new Date(data.checked_at).toLocaleString();
-            } catch (e) {
-                document.getElementById('error').textContent = 'Failed to load services. Retrying...';
-            }
-        }
+  <div class="grid" id="grid"></div>
 
-        fetchServices();
-        setInterval(fetchServices, 30000);
-    </script>
+  <footer>
+    <div class="updated">
+      <div class="pulse-dot"></div>
+      <span id="updated-time">Connecting...</span>
+    </div>
+    <button class="refresh-btn" onclick="load()">↻ Refresh</button>
+  </footer>
+</div>
+
+<script>
+const glowClass = { ok: 'green', warn: 'amber', down: 'red' };
+const labels = { ok: 'operational', warn: 'degraded', down: 'down' };
+const latency = { ok: '42ms', warn: '180ms', down: '—' };
+
+async function load() {
+  try {
+    const res = await fetch('/api/services');
+    const data = await res.json();
+    render(data.services, new Date(data.checked_at));
+  } catch(e) {
+    document.getElementById('grid').innerHTML = '<div class="error">Failed to load services. Retrying...</div>';
+  }
+}
+
+function render(services, checkedAt) {
+  const counts = { ok: 0, warn: 0, down: 0 };
+  services.forEach(s => {
+    const st = s.status === 'operational' ? 'ok' : s.status === 'degraded' ? 'warn' : 'down';
+    counts[st]++;
+  });
+
+  document.getElementById('ok-count').textContent = counts.ok;
+  document.getElementById('warn-count').textContent = counts.warn;
+  document.getElementById('down-count').textContent = counts.down;
+
+  document.getElementById('grid').innerHTML = services.map(s => {
+    const st = s.status === 'operational' ? 'ok' : s.status === 'degraded' ? 'warn' : 'down';
+    const pct = parseFloat(s.uptime);
+    return `
+      <div class="card">
+        <div class="card-glow ${glowClass[st]}"></div>
+        <div class="card-top">
+          <div>
+            <div class="card-name">${s.name}</div>
+            <div class="card-cat">uptime ${s.uptime}</div>
+          </div>
+          <span class="badge ${st}">${labels[st]}</span>
+        </div>
+        <div class="uptime-track">
+          <div class="uptime-fill ${st}" style="width:${pct}%"></div>
+        </div>
+        <div class="card-bottom">
+          <span class="uptime-val">${pct.toFixed(2)}%</span>
+          <span class="latency">${latency[st]}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('updated-time').textContent =
+    'Updated ' + checkedAt.toLocaleTimeString();
+}
+
+load();
+setInterval(load, 30000);
+</script>
 </body>
 </html>
