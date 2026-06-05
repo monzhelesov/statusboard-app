@@ -30,8 +30,7 @@
 
 ## Локальная разработка
 
-Для быстрой проверки изменений без деплоя в кластер — docker-compose поднимает
-API, Frontend и локальный PostgreSQL одной командой:
+Для быстрой проверки изменений без деплоя в кластер — docker-compose поднимает API, Frontend и локальный PostgreSQL одной командой:
 
     docker-compose up
 
@@ -45,22 +44,22 @@ API, Frontend и локальный PostgreSQL одной командой:
 
 При каждом коммите в main:
 1. Тесты (pytest)
-2. Сканирование образов на уязвимости (Trivy)
-3. Сборка Docker образов
-4. Push в Yandex Container Registry с тегом commit SHA и latest
+2. Сканирование Docker образов (Trivy)
+3. Сборка образов
+4. Push в Yandex Container Registry
 
-При создании тега v* — деплой в production:
+При создании тега v*:
 
     git tag v1.0.0
     git push origin v1.0.0
 
 1. Сборка образов с тегом версии
 2. Push в registry
-3. Деплой в Kubernetes через kubectl set image
-4. Проверка что rollout прошёл успешно
+3. Деплой в Kubernetes
+4. Проверка rollout
 
 ## Секреты репозитория
 
-- YC_SA_KEY      — JSON ключ сервисного аккаунта в base64
+- YC_SA_KEY — JSON ключ сервисного аккаунта в base64
 - YC_REGISTRY_ID — ID Yandex Container Registry
-- KUBE_CONFIG    — kubeconfig в base64
+- KUBE_CONFIG — kubeconfig в base64
